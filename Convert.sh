@@ -2,7 +2,8 @@
 set -e
 set -u
 set -o pipefail
-exec > ~/nautilus_script_debug.log 2>&1
+exec > /tmp/nautilus_converter.log 2>&1
+# `tail -f /tmp/nautilus_converter.log` to view logs in real time
 
 # formats=$(file "$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS" -b --mime-type)
 # notify-send frmts "$formats"
@@ -41,7 +42,7 @@ while IFS= read -r path; do
 		    exit 1
 		fi
         # Ask user for the format they prefer
-        to=$(GSK_RENDERER=gl zenity --list --title="Please, select the destination format" --height=500 --column=Formats webm mp4 mov mkv)
+        to=$(GSK_RENDERER=gl zenity --list --title="Select the destination format for $(basename "$path")" --height=500 --column=Formats webm mp4 mov mkv)
         # Convert and save
         noext="${path%.*}"
         ffmpeg -i "$path" "$noext.$to"
@@ -55,7 +56,7 @@ while IFS= read -r path; do
 		    exit 1
 		fi
         # Ask user for the format they prefer
-        to=$(GSK_RENDERER=gl zenity --list --title="Please, select the destination format" --height=500 --column=Formats flac wav aac mp3 m4a)
+        to=$(GSK_RENDERER=gl zenity --list --title="Select the destination format for $(basename "$path")" --height=500 --column=Formats flac wav aac mp3 m4a)
         # Convert and save
         noext="${path%.*}"
         ffmpeg -i "$path" "$noext.$to"
@@ -77,7 +78,7 @@ while IFS= read -r path; do
         iconv -f "$from" -t "$to" "$noext".txt -o "$noext".txt
         
     # CASE: TEXT DOCUMENT
-    elif [ "$format" == "application/vnd.oasis.opendocument.text" ] || [ "$format" == "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ]; then
+    elif [ "$format" == "application/vnd.oasis.opendocument.text" ] || [ "$format" == "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ] || []; then
     	# Format is document. Convert with LibreOffice.
     	# Check if LibreOffice is installed
 		if ! command -v libreoffice >/dev/null 2>&1; then
@@ -85,10 +86,18 @@ while IFS= read -r path; do
 		    exit 1
 		fi
         # Ask user for the format they prefer
-        to=$(GSK_RENDERER=gl zenity --list --title="Please, select the destination format" --height=500 --column=Formats odt docx doc pages rft html pdf)
+        to=$(GSK_RENDERER=gl zenity --list --title="Select the destination format for $(basename "$path")" --height=500 --column=Formats odt docx doc pages rft html pdf)
         # Convert and save
         noext="${path%.*}"
-        libreoffice --convert-to "$to" "$path"
+        # libreoffice --convert-to "$to" "$path"
+		output=$(libreoffice --convert-to "$to" "$path" 2>&1)
+		if [ ! -f "${path%.*}.$to" ]; then
+		    GSK_RENDERER=gl zenity --error \
+		        --title="Conversion Failed" \
+		        --text="$output"
+		fi
+
+        
 
    # CASE: SPREADSHEET
    elif [ "$format" == "application/vnd.oasis.opendocument.spreadsheet" ] || [ "$format" == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ]; then
@@ -99,11 +108,16 @@ while IFS= read -r path; do
 		    exit 1
 		fi
         # Ask user for the format they prefer
-        to=$(GSK_RENDERER=gl zenity --list --title="Please, select the destination format" --height=500 --column=Formats ods xlsx xls numbers html pdf)
+        to=$(GSK_RENDERER=gl zenity --list --title="Select the destination format for $(basename "$path")" --height=500 --column=Formats ods xlsx xls numbers html pdf)
         # Convert and save
         noext="${path%.*}"
-        libreoffice --convert-to "$to" "$path"
-
+		output=$(libreoffice --convert-to "$to" "$path" 2>&1)
+		if [ ! -f "${path%.*}.$to" ]; then
+		    GSK_RENDERER=gl zenity --error \
+		        --title="Conversion Failed" \
+		        --text="$output"
+		fi
+		
    # CASE: PRESENTATION
    elif [ "$format" == "application/vnd.oasis.opendocument.presentation" ] || [ "$format" == "application/vnd.openxmlformats-officedocument.presentationml.presentation" ]; then
     	# Format is a presentation. Convert with LibreOffice.
@@ -113,11 +127,16 @@ while IFS= read -r path; do
 		    exit 1
 		fi
         # Ask user for the format they prefer
-        to=$(GSK_RENDERER=gl zenity --list --title="Please, select the destination format" --height=500 --column=Formats odp pptx ppt keynote html pdf)
+        to=$(GSK_RENDERER=gl zenity --list --title="Select the destination format for $(basename "$path")" --height=500 --column=Formats odp pptx ppt keynote html pdf)
         # Convert and save
         noext="${path%.*}"
-       libreoffice --convert-to "$to" "$path"
-
+		output=$(libreoffice --convert-to "$to" "$path" 2>&1)
+		if [ ! -f "${path%.*}.$to" ]; then
+		    GSK_RENDERER=gl zenity --error \
+		        --title="Conversion Failed" \
+		        --text="$output"
+		fi
+		
    # CASE: FONT
    elif [[ "$format" == font/* ]]; then
     	# Format is a font. Convert with FontForge.
@@ -127,7 +146,7 @@ while IFS= read -r path; do
 		    exit 1
 		fi
         # Ask user for the format they prefer
-        to=$(GSK_RENDERER=gl zenity --list --title="Please, select the destination format" --height=500 --column=Formats otf ttf woff woff2)
+        to=$(GSK_RENDERER=gl zenity --list --title="Select the destination format for $(basename "$path")" --height=500 --column=Formats otf ttf woff woff2)
         # Convert and save
         noext="${path%.*}"
         fontforge -lang=ff -c 'Open($1); Generate($2); Close();' "$from" "$to"
