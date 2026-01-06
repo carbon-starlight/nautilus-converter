@@ -1,4 +1,16 @@
 #! /bin/bash
+
+# Convert files directly from Files (aka Nautilus) right-cilck context menu
+# To use, save this file to ~/.local/share/nautilus/scripts/ and make it executable
+
+# Recommended command for installation: 
+# curl -L -o ~/.local/share/nautilus/scripts/Convert… https://raw.githubusercontent.com/carbon-starlight/nautilus-converter/HEAD/Convert…
+# chmod +x "~/.local/share/nautilus/scripts/Convert…"
+
+# Read what's happening with `tail -f /tmp/nautilus_converter.log`
+
+# 🄯 2026 github.com/carbon-starlight • GPL-3.0-or-later
+
 set -e
 set -u
 set -o pipefail
@@ -42,7 +54,7 @@ while IFS= read -r path; do
 		    exit 1
 		fi
         # Ask user for the format they prefer
-        to=$(GSK_RENDERER=gl zenity --list --title="Select the destination format for $(basename "$path")" --height=500 --column=Formats webm mp4 mov mkv)
+        to=$(GSK_RENDERER=gl zenity --list --title="Select the destination format for $(basename "$path")" --height=500 --column=Formats webm ogg mp4 mov mkv)
         # Convert and save
         noext="${path%.*}"
         ffmpeg -i "$path" "$noext.$to"
@@ -78,7 +90,7 @@ while IFS= read -r path; do
         iconv -f "$from" -t "$to" "$noext".txt -o "$noext".txt
         
     # CASE: TEXT DOCUMENT
-    elif [ "$format" == "application/vnd.oasis.opendocument.text" ] || [ "$format" == "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ] || []; then
+    elif [ "$format" == "application/vnd.oasis.opendocument.text" ] || [ "$format" == "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ] || [ "$format" == "application/vnd.apple.pages" ] || [ "$format" == "application/msword" ] || [ "$format" == "application/pdf" ] || [ "$format" == "application/rtf" ] || [ "$format" == "text/rtf" ] || [ "$format" == "application/html" ]; then
     	# Format is document. Convert with LibreOffice.
     	# Check if LibreOffice is installed
 		if ! command -v libreoffice >/dev/null 2>&1; then
@@ -86,7 +98,7 @@ while IFS= read -r path; do
 		    exit 1
 		fi
         # Ask user for the format they prefer
-        to=$(GSK_RENDERER=gl zenity --list --title="Select the destination format for $(basename "$path")" --height=500 --column=Formats odt docx doc pages rft html pdf)
+        to=$(GSK_RENDERER=gl zenity --list --title="Select the destination format for $(basename "$path")" --height=500 --column=Formats odt docx doc pages rtf html pdf)
         # Convert and save
         noext="${path%.*}"
         # libreoffice --convert-to "$to" "$path"
@@ -97,10 +109,8 @@ while IFS= read -r path; do
 		        --text="$output"
 		fi
 
-        
-
    # CASE: SPREADSHEET
-   elif [ "$format" == "application/vnd.oasis.opendocument.spreadsheet" ] || [ "$format" == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ]; then
+   elif [ "$format" == "application/vnd.oasis.opendocument.spreadsheet" ] || [ "$format" == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ] || [ "$format" == "application/vnd.ms-excel" ] || [ "$format" == "application/vnd.apple.numbers" ]; then
     	# Format is spreadsheet. Convert with LibreOffice.
     	# Check if LibreOffice is installed
 		if ! command -v libreoffice >/dev/null 2>&1; then
@@ -119,7 +129,7 @@ while IFS= read -r path; do
 		fi
 		
    # CASE: PRESENTATION
-   elif [ "$format" == "application/vnd.oasis.opendocument.presentation" ] || [ "$format" == "application/vnd.openxmlformats-officedocument.presentationml.presentation" ]; then
+   elif [ "$format" == "application/vnd.oasis.opendocument.presentation" ] || [ "$format" == "application/vnd.openxmlformats-officedocument.presentationml.presentation" ] || [ "$format" == "application/vnd.ms-powerpoint" ]|| [ "$format" == "application/vnd.apple.keynote" ]; then
     	# Format is a presentation. Convert with LibreOffice.
     	# Check if LibreOffice is installed
 		if ! command -v libreoffice >/dev/null 2>&1; then
@@ -150,12 +160,37 @@ while IFS= read -r path; do
         # Convert and save
         noext="${path%.*}"
         fontforge -lang=ff -c 'Open($1); Generate($2); Close();' "$from" "$to"
+
+   # CASE: 3D MODEL
+   elif [[ "$format" == model/* ]] || [ "$format" == "application/x-3ds" ]; then
+    	# Format is a 3D model. Convert with ctmconv.
+    	# Check if ctmconv is installed
+		if ! command -v ctmconv >/dev/null 2>&1; then
+		    GSK_RENDERER=gl zenity --info --title="Missing dependency" --text="To convert 3D models, you need ctmconv installed and accessible from the command line"
+		    exit 1
+		fi
+        # Ask user for the format they prefer
+        to=$(GSK_RENDERER=gl zenity --list --title="Select the destination format for $(basename "$path")" --height=500 --column=Formats ctm ply stl 3ds dae obj lwo off wrl)
+        # Convert and save
+        noext="${path%.*}"
+        output=$(ctmconv "$from" "$to" 2>&1)
+		if [ ! -f "${path%.*}.$to" ]; then
+		    RESPONSE=$(
+				GSK_RENDERER=gl zenity --error \
+					--title="Conversion Failed" \
+					--text="$output"\
+					--extra-button="File an Issue"
+				)
+			if [ "$RESPONSE" = "File an Issue" ]; then
+		    	xdg-open "https://github.com/carbon-starlight/nautilus-converter/issues/new?body=Processing file: $(basename "$path")%0D%0DWith MIME type: $format%0D%0DResulted in console output:%0D<pre>%0D$output%0D</pre>%0D%0D"
+			fi
+		fi
        
+   	# CASE: UNKNOWN FORMAT
     else
-   		# Unknown format
-   		RESPONSE=$(GSK_RENDERER=gl zenity --info --title="Unsupported format" --text="The file you want to convert is of unsupported format. Fill an issue to request its support" --extra-button="Report Issue")
-		if [ "$RESPONSE" = "Report Issue" ]; then
-		    xdg-open "https://example.com"
+   		RESPONSE=$(GSK_RENDERER=gl zenity --info --title="Unsupported format" --text="The file you want to convert — <i>$(basename "$path")</i> of recognized MIME type <i>$format</i> — is of unsupported format. Fill an issue to request its support" --extra-button="File an Issue")
+		if [ "$RESPONSE" = "File an Issue" ]; then
+		    xdg-open "https://github.com/carbon-starlight/nautilus-converter/issues/new?body=Requesting support for file: %60$(echo "$path")%60%0D%0DGuessed MIME format: %60$format%60%0D%0DFirst bytes:%0D%0D<pre>%0D$(hexdump -n 128 -C "$path" | sed ':a;N;$!ba;s/\n/%0D/g')%0D</pre>%0D%0D"
 		fi
     fi
     

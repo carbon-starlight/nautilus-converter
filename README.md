@@ -8,7 +8,7 @@ While not a full substitude for this function in terms of convenience *(I would 
 
 There were several attempts to make such a converter, [one](https://github.com/hexplor/nautilus-imageconverter) exclusively for images, another [one](https://github.com/tongphe/batch-convert-documents) — for one-way conversion of documents to PDF or HTML, and [one more](https://codeberg.org/Lich-Corals/linux-file-converter-addon), that I became aware of after finishing my project, for images, audio and video. But never — for the amount of formats I attempted to cover.
 
-You need the following dependences: `ffmpeg` to convert <ins>images, audio and video</ins>, `iconv` to convert <ins>text</ins> between encodings, `libreoffice` to convert <ins>documents</ins> and `fontforge` to convert <ins>fonts</ins>.
+You need the following dependences: `ffmpeg` to convert <ins>images, audio and video</ins>, `iconv` to convert <ins>text</ins> between encodings, `libreoffice` to convert <ins>documents</ins>, `ctmconv` to convert 3D models and `fontforge` to convert <ins>fonts</ins>.
 
 ## Installation
 
