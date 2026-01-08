@@ -2,7 +2,9 @@
 
 This script is a particial implementation of a [feature request](https://discourse.gnome.org/t/feature-request-add-an-option-to-quickly-convert-formats-right-from-files/) to make file conversion built-in and avalible in right-click context menu of GNOME Files, a.k.a. Nautilus. 
 
-VIDEO HERE
+<!-- [Screencast From 2026-01-09 01-05-57.webm](https://github.com/user-attachments/assets/684ebc89-a6e2-4219-93c5-800ab968840a) -->
+
+![Screencast From 2026-01-09 01-05-57](https://github.com/user-attachments/assets/7b5ede73-a988-4e31-8c31-7a62fff3e325)
 
 > [!IMPORTANT]
 > You need the following dependences: `ffmpeg` to convert <ins>images, audio and video</ins>, `iconv` to convert <ins>text</ins> between encodings, `libreoffice` to convert <ins>documents</ins>, `ctmconv` to convert 3D models and `fontforge` to convert <ins>fonts</ins>.
