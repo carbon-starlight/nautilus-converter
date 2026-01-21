@@ -19,12 +19,15 @@ exec > /tmp/nautilus_converter.log 2>&1
 
 # formats=$(file "$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS" -b --mime-type)
 # notify-send frmts "$formats"
+# NAUTILUS_SCRIPT_SELECTED_FILE_PATHS=$(echo "$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS" | sed ':a;N;$!ba;s/\n/     \n     /g')
+# echo "$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS" | hexdump -C
 
 while IFS= read -r path; do
 	# skip empty lines
 	if [ -z "$path" ]; then
 	        continue
 	    fi
+	echo "_Converting_: $path"
 	
     # $path is file path
     # 1. Determine the format
@@ -109,8 +112,8 @@ while IFS= read -r path; do
 		        --text="$output"
 		fi
 
-   # CASE: SPREADSHEET
-   elif [ "$format" == "application/vnd.oasis.opendocument.spreadsheet" ] || [ "$format" == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ] || [ "$format" == "application/vnd.ms-excel" ] || [ "$format" == "application/vnd.apple.numbers" ]; then
+	# CASE: SPREADSHEET
+	elif [ "$format" == "application/vnd.oasis.opendocument.spreadsheet" ] || [ "$format" == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ] || [ "$format" == "application/vnd.ms-excel" ] || [ "$format" == "application/vnd.apple.numbers" ]; then
     	# Format is spreadsheet. Convert with LibreOffice.
     	# Check if LibreOffice is installed
 		if ! command -v libreoffice >/dev/null 2>&1; then
@@ -128,8 +131,8 @@ while IFS= read -r path; do
 		        --text="$output"
 		fi
 		
-   # CASE: PRESENTATION
-   elif [ "$format" == "application/vnd.oasis.opendocument.presentation" ] || [ "$format" == "application/vnd.openxmlformats-officedocument.presentationml.presentation" ] || [ "$format" == "application/vnd.ms-powerpoint" ]|| [ "$format" == "application/vnd.apple.keynote" ]; then
+	# CASE: PRESENTATION
+	elif [ "$format" == "application/vnd.oasis.opendocument.presentation" ] || [ "$format" == "application/vnd.openxmlformats-officedocument.presentationml.presentation" ] || [ "$format" == "application/vnd.ms-powerpoint" ]|| [ "$format" == "application/vnd.apple.keynote" ]; then
     	# Format is a presentation. Convert with LibreOffice.
     	# Check if LibreOffice is installed
 		if ! command -v libreoffice >/dev/null 2>&1; then
@@ -147,8 +150,8 @@ while IFS= read -r path; do
 		        --text="$output"
 		fi
 		
-   # CASE: FONT
-   elif [[ "$format" == font/* ]]; then
+	# CASE: FONT
+	elif [[ "$format" == font/* ]]; then
     	# Format is a font. Convert with FontForge.
     	# Check if FontForge is installed
 		if ! command -v fontforge >/dev/null 2>&1; then
@@ -161,8 +164,8 @@ while IFS= read -r path; do
         noext="${path%.*}"
         fontforge -lang=ff -c 'Open($1); Generate($2); Close();' "$from" "$to"
 
-   # CASE: 3D MODEL
-   elif [[ "$format" == model/* ]] || [ "$format" == "application/x-3ds" ]; then
+	# CASE: 3D MODEL
+	elif [[ "$format" == model/* ]] || [ "$format" == "application/x-3ds" ]; then
     	# Format is a 3D model. Convert with ctmconv.
     	# Check if ctmconv is installed
 		if ! command -v ctmconv >/dev/null 2>&1; then
@@ -188,9 +191,12 @@ while IFS= read -r path; do
        
    	# CASE: UNKNOWN FORMAT
     else
+		echo "UNKNOWN FORMAT, MIME TYPE: $format, PATH: $path"
    		RESPONSE=$(GSK_RENDERER=gl zenity --info --title="Unsupported format" --text="The file you want to convert — <i>$(basename "$path")</i> of recognized MIME type <i>$format</i> — is of unsupported format. Fill an issue to request its support" --extra-button="File an Issue")
+		echo "$RESPONSE"
 		if [ "$RESPONSE" = "File an Issue" ]; then
-		    xdg-open "https://github.com/carbon-starlight/nautilus-converter/issues/new?body=Requesting support for file: %60$(echo "$path")%60%0D%0DGuessed MIME format: %60$format%60%0D%0DFirst bytes:%0D%0D<pre>%0D$(hexdump -n 128 -C "$path" | sed ':a;N;$!ba;s/\n/%0D/g')%0D</pre>%0D%0D"
+			echo "https://github.com/carbon-starlight/nautilus-converter/issues/new?body=Requesting support for file: %60$(echo "$path")%60%0D%0DGuessed MIME type: %60$format%60 with file version:%0D%0D%60%60%60%0D$(file --version | sed ':a;N;$!ba;s/\n/%0D/g')%0D%60%60%60%0D%0DFirst bytes:%0D%0D<pre>%0D$(hexdump -n 128 -C "$path" | sed ':a;N;$!ba;s/\n/%0D/g')%0D</pre>%0D%0D"
+		    xdg-open "https://github.com/carbon-starlight/nautilus-converter/issues/new?body=Requesting support for file: %60$(echo "$path")%60%0D%0DGuessed MIME type: %60$format%60 with file version:%0D%0D%60%60%60%0D$(file --version | sed ':a;N;$!ba;s/\n/%0D/g')%0D%60%60%60%0D%0DFirst bytes:%0D%0D<pre>%0D$(hexdump -n 128 -C "$path" | sed ':a;N;$!ba;s/\n/%0D/g')%0D</pre>%0D%0D"
 		fi
     fi
     
